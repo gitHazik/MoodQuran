@@ -1,210 +1,155 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Lock, CheckCircle2, Play, Pause, Bookmark } from 'lucide-react';
+import { ArrowLeft, Check, Lock, Play, Pause, Send, Map, CircleDot } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { recordDailyActivity } from '../lib/streak';
+import { pathways } from '../data/paths';
 
 export default function PathLearner() {
   const navigate = useNavigate();
-  const [selectedPath, setSelectedPath] = useState(null);
-  const [activeModalNode, setActiveModalNode] = useState(null);
-  const [reflectionText, setReflectionText] = useState('');
+  const [activePathId, setActivePathId] = useState('anxiety');
+  const [completedDays, setCompletedDays] = useState([]);
+  const [expandedDay, setExpandedDay] = useState(null); 
+  const [reflectionInput, setReflectionInput] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [activeAudioId, setActiveAudioId] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef(null);
+  const activePath = pathways[activePathId];
 
-  // Core high-utility curated mock pathways data structure
-  const [pathways, setPathways] = useState([
-    { id: 'anxiety', title: 'Finding Peace in Anxiety', days: 7, description: 'Ground your heart during intense, high-stakes moments.', level: 'Beginner' },
-    { id: 'prophets', title: 'The Prayers of the Prophets', days: 14, description: 'Analyze scriptural protocols for calling upon divine mercy.', level: 'Intermediate' },
-    { id: 'ethics', title: 'Financial Ethics & Barakah', days: 5, description: 'Unlock cosmic expansion through sound microeconomic habits.', level: 'Advanced' },
-    { id: 'patience', title: 'Rebuilding Patience', days: 10, description: 'Build an internal fortress when external variables fail.', level: 'Beginner' },
-  ]);
+  useEffect(() => { fetchProgress(); return () => { if (audioRef.current) audioRef.current.pause(); }; }, [activePathId]);
 
-  // Track mock user progression state for the nodes mapping matrix
-  const [nodes, setNodes] = useState([
-    { day: 1, status: 'completed', title: 'The Mechanism of Ease', verse: '94:5', text: 'For indeed, with hardship will be ease.', tafsir: 'The verse guarantees that adversity does not merely precede comfort, but carries relief natively embedded inside it.' },
-    { day: 2, status: 'completed', title: 'The Anchor of Remembrance', verse: '13:28', text: 'Unquestionably, by the remembrance of Allah hearts find rest.', tafsir: 'Remembrance coordinates neurological state shifts from flight-or-fight back into safe equilibrium.' },
-    { day: 3, status: 'active', title: 'The Capacity Guardrail', verse: '2:286', text: 'Allah does not burden a soul beyond that it can bear.', tafsir: 'A total reassurance that your current environment contains no structural payload that you are mathematically incapable of handling.' },
-    { day: 4, status: 'locked', title: 'The Shield of Perseverance', verse: '2:153' },
-    { day: 5, status: 'locked', title: 'The Nearness Formula', verse: '2:186' },
-  ]);
-
-  const handleNodeClick = (node) => {
-    if (node.status === 'locked') return;
-    setActiveModalNode(node);
+  const fetchProgress = async () => {
+    const { data } = await supabase.from('path_reflections').select('day_number').eq('path_id', activePathId);
+    if (data) setCompletedDays(data.map(entry => entry.day_number));
+    setExpandedDay(null);
   };
 
-  const submitReflection = () => {
-    if (!reflectionText.trim()) return;
-    
-    // Simulate updating active state matrix inline to prove frontend functionality
-    setNodes(prev => prev.map(n => {
-      if (n.day === activeModalNode.day) return { ...n, status: 'completed' };
-      if (n.day === activeModalNode.day + 1) return { ...n, status: 'active' };
-      return n;
-    }));
-    
-    setReflectionText('');
-    setActiveModalNode(null);
-    setIsPlaying(false);
+  const toggleAudio = async (reference, dayNumber) => {
+    if (activeAudioId === dayNumber && audioRef.current) {
+      if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); } 
+      else { audioRef.current.play(); setIsPlaying(true); } return;
+    }
+    if (audioRef.current) audioRef.current.pause();
+    setActiveAudioId(dayNumber); setIsPlaying(true);
+
+    const bracketMatch = reference.match(/\[(.*?)\]/); if (!bracketMatch) return;
+    const numbers = bracketMatch[1].match(/\d+/g); if (!numbers || numbers.length < 2) return;
+    const ayahKey = `${numbers[0]}:${numbers[1]}`;
+
+    try {
+      const res = await fetch(`https://api.alquran.cloud/v1/ayah/${ayahKey}/ar.alafasy`);
+      const json = await res.json();
+      if (json.data && json.data.audio) {
+        audioRef.current = new Audio(json.data.audio);
+        audioRef.current.onended = () => { setIsPlaying(false); setActiveAudioId(null); };
+        await audioRef.current.play();
+      }
+    } catch (error) { setActiveAudioId(null); setIsPlaying(false); }
   };
+
+  const completeDay = async (dayNumber) => {
+    if (!reflectionInput.trim()) return alert("Please write a short reflection.");
+    setIsSaving(true);
+    try {
+      const payload = { path_id: activePathId, day_number: dayNumber, reflection_text: reflectionInput };
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) payload.user_id = user.id;
+      await supabase.from('path_reflections').insert([payload]);
+      recordDailyActivity(); setCompletedDays(prev => [...prev, dayNumber]); setReflectionInput(''); setExpandedDay(null);
+    } catch (error) { alert("Error saving progress."); } finally { setIsSaving(false); }
+  };
+
+  const firstUncompletedDay = activePath.days.find(d => !completedDays.includes(d.dayNumber))?.dayNumber || 999;
 
   return (
-    <div className="flex flex-col h-full bg-parchment text-walnut relative">
-      {/* Structural Header block */}
-      <header className="flex items-center gap-4 p-4 border-b-2 border-walnut/10 bg-white shadow-sm">
-        <button 
-          onClick={() => selectedPath ? setSelectedPath(null) : navigate('/')} 
-          className="p-1 hover:bg-parchment rounded-lg transition-colors"
-        >
-          <ArrowLeft size={22} />
+    <div className="flex flex-col h-full bg-transparent text-walnut overflow-y-auto pb-10 relative">
+      <div className="absolute top-0 left-0 w-full h-80 bg-gradient-to-b from-primary/10 to-transparent -z-10 pointer-events-none" />
+
+      <header className="flex items-center gap-4 p-6 sticky top-0 z-20 bg-parchment/80 dark:bg-parchment/10 backdrop-blur-md border-b border-walnut/5 dark:border-white/5">
+        <button onClick={() => navigate('/')} className="p-2 hover:bg-white dark:hover:bg-white/10 rounded-full transition-colors bg-white/50 dark:bg-white/5 border border-walnut/10 dark:border-white/10">
+          <ArrowLeft size={20} />
         </button>
         <div>
-          <h2 className="font-bold text-lg leading-tight">
-            {selectedPath ? selectedPath.title : 'PathLearner Journeys'}
-          </h2>
-          <p className="text-xs text-walnut/60">
-            {selectedPath ? 'Complete your daily node module' : 'Select an actionable scriptural track'}
-          </p>
+          <h2 className="font-serif font-bold text-xl tracking-tight text-walnut">Journeys</h2>
         </div>
       </header>
 
-      {/* Layer 1: Curated Selection Track Hub */}
-      {!selectedPath ? (
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          {pathways.map((path) => (
-            <div 
-              key={path.id}
-              onClick={() => setSelectedPath(path)}
-              className="bg-white border-2 border-walnut rounded-2xl p-5 shadow-[4px_4px_0px_0px_var(--color-walnut)] cursor-pointer hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_var(--color-walnut)] transition-all"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-bold uppercase px-2.5 py-0.5 bg-parchment border border-walnut text-walnut rounded-full">
-                  {path.level}
-                </span>
-                <span className="text-xs font-bold text-primary flex items-center gap-1">
-                  <BookOpen size={14} /> {path.days} Days
-                </span>
+      <div className="flex gap-2 px-6 mt-4 overflow-x-auto pb-2 scrollbar-hide">
+        {Object.values(pathways).map(path => (
+          <button key={path.id} onClick={() => setActivePathId(path.id)} className={`whitespace-nowrap px-5 py-2.5 text-sm font-medium rounded-full transition-all duration-300 ${activePathId === path.id ? 'bg-primary text-white shadow-md shadow-primary/20 dark:shadow-none scale-105' : 'bg-white dark:bg-white/5 border border-walnut/10 dark:border-white/10 text-walnut/60 dark:text-walnut/70 hover:text-walnut hover:border-primary/30 hover:bg-primary/5'}`}>
+            {path.title}
+          </button>
+        ))}
+      </div>
+
+      <div className="px-6 mt-8 mb-10">
+        <span className="text-primary font-bold tracking-widest text-[10px] uppercase mb-2 block">{activePath.totalDays}-Day Module</span>
+        <h1 className="text-3xl font-serif font-bold mb-3 tracking-tight text-walnut leading-tight">{activePath.title}</h1>
+        <p className="text-sm text-walnut/60 dark:text-walnut/70 leading-relaxed max-w-[280px]">{activePath.description}</p>
+      </div>
+
+      <div className="px-6">
+        {activePath.days.map((day, index) => {
+          const isCompleted = completedDays.includes(day.dayNumber);
+          const isLocked = day.dayNumber > firstUncompletedDay;
+          const isCurrent = day.dayNumber === firstUncompletedDay;
+          const isExpanded = expandedDay === day.dayNumber;
+          const isLast = index === activePath.days.length - 1;
+
+          return (
+            <div key={day.dayNumber} className="flex gap-5">
+              <div className="flex flex-col items-center">
+                <button onClick={() => { if (!isLocked) setExpandedDay(isExpanded ? null : day.dayNumber); }} className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10 transition-all duration-500 ${isCompleted ? 'bg-primary text-white shadow-md shadow-primary/30 dark:shadow-none' : isCurrent ? 'bg-white dark:bg-transparent border-2 border-primary text-primary shadow-sm scale-110' : 'bg-white/50 dark:bg-white/5 border border-walnut/10 dark:border-white/10 text-walnut/30 dark:text-walnut/40'}`}>
+                  {isCompleted ? <Check size={18} strokeWidth={3} /> : isCurrent ? <CircleDot size={18} strokeWidth={2.5} className="animate-pulse" /> : <Lock size={16} />}
+                </button>
+                {!isLast && <div className={`w-[2px] flex-1 my-1 transition-colors duration-500 ${isCompleted ? 'bg-primary/40' : 'bg-walnut/10 dark:bg-white/10'}`} />}
               </div>
-              <h3 className="font-bold text-lg mb-1 tracking-tight">{path.title}</h3>
-              <p className="text-xs text-walnut/70 leading-relaxed">{path.description}</p>
-            </div>
-          ))}
-        </div>
-      ) : (
-        /* Layer 2: Gamified Snaking Timeline Engine */
-        <div className="flex-1 overflow-y-auto p-6 relative flex flex-col items-center">
-          {/* Central Connecting Graph String line */}
-          <div className="absolute top-0 bottom-0 left-1/2 w-0.5 border-l-2 border-dashed border-walnut/20 -translate-x-1/2 z-0" />
 
-          <div className="w-full max-w-xs space-y-12 my-6 z-10 relative">
-            {nodes.map((node, index) => {
-              // Mathematical offsets to create standard gamified curves smoothly
-              const offsets = ['translate-x-[-40px]', 'translate-x-[40px]', 'translate-x-[-20px]', 'translate-x-[30px]', 'translate-x-[-30px]'];
-              const currentOffset = offsets[index % offsets.length];
+              <div className={`flex-1 pb-8 ${isLast ? 'pb-2' : ''}`}>
+                <div className={`cursor-pointer transition-all duration-300 ${isLocked ? 'opacity-40' : 'opacity-100 hover:translate-x-1'}`} onClick={() => { if (!isLocked) setExpandedDay(isExpanded ? null : day.dayNumber); }}>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isCompleted ? 'text-primary/70' : isCurrent ? 'text-primary' : 'text-walnut/40 dark:text-walnut/50'}`}>Day {day.dayNumber}</p>
+                  <h3 className={`font-serif font-bold text-xl tracking-tight ${isCurrent ? 'text-walnut' : 'text-walnut/70'}`}>{day.title}</h3>
+                </div>
 
-              return (
-                <div key={node.day} className={`flex flex-col items-center transform ${currentOffset}`}>
-                  <button
-                    onClick={() => handleNodeClick(node)}
-                    disabled={node.status === 'locked'}
-                    className={`w-16 h-16 rounded-full border-2 border-walnut flex items-center justify-center font-bold text-lg transition-all relative
-                    ${node.status === 'completed' ? 'bg-walnut text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)]' : ''}
-                    ${node.status === 'active' ? 'bg-primary text-white scale-110 animate-pulse border-2 shadow-[4px_4px_0px_0px_var(--color-walnut)]' : ''}
-                    ${node.status === 'locked' ? 'bg-parchment-dark text-walnut/30 border-walnut/20 cursor-not-allowed' : ''}
-                    `}
-                  >
-                    {node.status === 'completed' ? <CheckCircle2 size={24} /> : node.day}
-                    
-                    {node.status === 'locked' && (
-                      <div className="absolute -top-1 -right-1 bg-white border border-walnut/40 p-0.5 rounded-full">
-                        <Lock size={10} className="text-walnut/40" />
+                <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100 mt-4' : 'grid-rows-[0fr] opacity-0'}`}>
+                  <div className="overflow-hidden">
+                    <div className="bg-white/90 dark:bg-white/5 backdrop-blur-sm border border-walnut/10 dark:border-white/10 rounded-3xl p-6 shadow-sm dark:shadow-none relative">
+                      
+                      <button onClick={() => toggleAudio(day.reference, day.dayNumber)} className={`absolute -top-3 right-6 flex items-center gap-1.5 text-[10px] uppercase font-bold transition-all duration-300 px-4 py-1.5 rounded-full shadow-sm border border-white dark:border-transparent ${activeAudioId === day.dayNumber ? 'bg-primary text-white scale-105' : 'bg-parchment dark:bg-white/10 text-walnut hover:bg-primary/10 hover:text-primary'}`}>
+                        {activeAudioId === day.dayNumber && isPlaying ? <><Pause size={12} className="fill-current"/> Pause</> : <><Play size={12} className="fill-current"/> Listen</>}
+                      </button>
+
+                      <p className="text-right text-2xl font-serif tracking-wide font-bold leading-loose mt-2 text-walnut/90 dark:text-walnut">{day.arabic}</p>
+                      <p className="text-sm italic font-medium mt-4 text-walnut/70 leading-relaxed">"{day.translation}"</p>
+                      <p className="text-[10px] uppercase tracking-widest font-bold text-primary/60 mt-4 pt-3 border-t border-walnut/10 dark:border-white/10">{day.reference}</p>
+                    </div>
+
+                    {isCompleted ? (
+                      <div className="mt-3 flex items-center justify-center gap-2 bg-primary/5 border border-primary/10 rounded-2xl p-4 text-primary">
+                        <Check size={18} strokeWidth={2.5} />
+                        <p className="text-xs font-bold uppercase tracking-wider">Reflection Logged</p>
+                      </div>
+                    ) : (
+                      <div className="mt-4 space-y-3">
+                        <div className="bg-white/50 dark:bg-white/5 border border-walnut/5 dark:border-white/5 rounded-2xl p-4 shadow-sm dark:shadow-none">
+                          <p className="text-xs font-medium leading-relaxed text-walnut/80 dark:text-walnut/90">
+                            <strong className="text-primary block mb-1">Reflect:</strong> {day.prompt}
+                          </p>
+                        </div>
+                        <textarea value={reflectionInput} onChange={(e) => setReflectionInput(e.target.value)} placeholder="Tap to write your thoughts..." className="w-full bg-white dark:bg-white/5 border border-walnut/10 dark:border-white/10 rounded-2xl p-4 text-sm min-h-[100px] focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 resize-none shadow-inner dark:shadow-none text-walnut" />
+                        <button onClick={() => completeDay(day.dayNumber)} disabled={!reflectionInput.trim() || isSaving} className="w-full bg-walnut dark:bg-primary hover:bg-walnut/90 disabled:opacity-50 text-white font-bold py-3.5 rounded-2xl transition-all flex justify-center items-center gap-2 shadow-sm active:scale-[0.98]">
+                          {isSaving ? "Saving..." : "Lock in Reflection"} {!isSaving && <Send size={16} />}
+                        </button>
                       </div>
                     )}
-                  </button>
-                  <span className="text-[11px] font-bold mt-2 bg-white/90 px-2 py-0.5 rounded-md border border-walnut/10 shadow-xs max-w-[120px] text-center truncate">
-                    {node.title || `Day ${node.day}`}
-                  </span>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Layer 3: Overlay Sheet Daily Node Module (Prepped for Core APIs) */}
-      {activeModalNode && (
-        <div className="absolute inset-0 bg-walnut/40 backdrop-blur-xs flex items-end justify-center z-50">
-          <div className="bg-parchment w-full max-h-[85%] rounded-t-3xl border-t-4 border-walnut p-6 overflow-y-auto shadow-2xl flex flex-col">
-            
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Day {activeModalNode.day} Active Module</span>
-                <h3 className="font-bold text-xl tracking-tight">{activeModalNode.title}</h3>
-              </div>
-              <button 
-                onClick={() => { setActiveModalNode(null); setIsPlaying(false); }}
-                className="text-xs font-bold border-2 border-walnut px-2.5 py-1 rounded-lg bg-white active:translate-y-0.5 transition-all"
-              >
-                Close
-              </button>
-            </div>
-
-            {/* Core Quran Content Field Container */}
-            <div className="bg-white border-2 border-walnut rounded-2xl p-5 space-y-4 mb-5 shadow-[2px_2px_0px_0px_var(--color-walnut)]">
-              <div className="flex justify-between items-center border-b border-walnut/5 pb-2">
-                <span className="text-xs font-bold text-walnut/50 flex items-center gap-1">
-                  <Bookmark size={12} /> Verse {activeModalNode.verse}
-                </span>
-                {/* Mock Audio Stream Player Controller Toggle button */}
-                <button 
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl border border-walnut bg-parchment hover:bg-primary hover:text-white transition-colors"
-                >
-                  {isPlaying ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
-                  {isPlaying ? 'Streaming Recitation...' : 'Listen Audio'}
-                </button>
-              </div>
-
-              {/* Dynamic script text displays */}
-              <p className="text-right text-xl font-serif leading-loose tracking-wide font-bold text-walnut">
-                {activeModalNode.day === 3 ? "لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا" : "فَإِنَّ مَعَ الْعُسْرِ يُسْرًا"}
-              </p>
-              <p className="text-sm font-medium text-walnut/90 leading-relaxed italic">
-                "{activeModalNode.text}"
-              </p>
-
-              {/* Collapsible/Toggle Tafsir Context Drawer metadata */}
-              <div className="pt-3 border-t border-dashed border-walnut/10">
-                <h4 className="text-[11px] font-bold uppercase tracking-wider text-primary mb-1">Context / Tafsir</h4>
-                <p className="text-xs text-walnut/70 leading-relaxed font-medium">{activeModalNode.tafsir}</p>
               </div>
             </div>
-
-            {/* Reflection Habit-Gate Input container */}
-            <div className="space-y-3 mt-auto">
-              <label className="block text-xs font-bold text-walnut/70">
-                Write down your practical action item for today to unlock the next step:
-              </label>
-              <textarea
-                value={reflectionText}
-                onChange={(e) => setReflectionText(e.target.value)}
-                rows={3}
-                placeholder="How will you apply this verse to your current stressors today?"
-                className="w-full bg-white border-2 border-walnut rounded-xl p-3 text-sm font-medium focus:outline-none focus:border-primary transition-colors resize-none"
-              />
-              <button
-                onClick={submitReflection}
-                disabled={!reflectionText.trim()}
-                className={`w-full py-3.5 border-2 border-walnut rounded-xl font-bold text-sm tracking-tight shadow-[3px_3px_0px_0px_var(--color-walnut)] transition-all flex items-center justify-center gap-2
-                ${reflectionText.trim() 
-                  ? 'bg-primary text-white hover:bg-primary/90 active:shadow-none active:translate-y-0.5' 
-                  : 'bg-parchment-dark text-walnut/30 border-walnut/10 shadow-none cursor-not-allowed'}`}
-              >
-                Log Reflection & Unlock Next Node
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }

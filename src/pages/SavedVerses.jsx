@@ -1,151 +1,110 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bookmark, Quote, Loader2, Volume2, Play, Pause } from 'lucide-react';
+import { ArrowLeft, Bookmark, Quote, Loader2, Play, Pause } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function SavedVerses() {
   const navigate = useNavigate();
   const [verses, setVerses] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Audio Player State
   const [activeAudioId, setActiveAudioId] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
 
-  useEffect(() => {
-    fetchSavedVerses();
-    return () => { if (audioRef.current) audioRef.current.pause(); };
-  }, []);
+  useEffect(() => { fetchSavedVerses(); return () => { if (audioRef.current) audioRef.current.pause(); }; }, []);
 
   const fetchSavedVerses = async () => {
-    const { data, error } = await supabase
-      .from('saved_verses')
-      .select('*')
-      .order('created_at', { ascending: false });
-      
-    if (!error && data) {
-      setVerses(data);
-    }
+    const { data, error } = await supabase.from('saved_verses').select('*').order('created_at', { ascending: false });
+    if (!error && data) setVerses(data);
     setLoading(false);
   };
 
   const toggleAudio = async (reference, verseId) => {
     if (activeAudioId === verseId && audioRef.current) {
       if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); } 
-      else { audioRef.current.play(); setIsPlaying(true); }
-      return;
+      else { audioRef.current.play(); setIsPlaying(true); } return;
     }
-
     if (audioRef.current) audioRef.current.pause();
+    setActiveAudioId(verseId); setIsPlaying(true);
 
-    setActiveAudioId(verseId);
-    setIsPlaying(true);
-
-    // BULLETPROOF REGEX: Extract the text inside the brackets, then grab the first two numbers
-    const bracketMatch = reference.match(/\[(.*?)\]/);
-    if (!bracketMatch) {
-      setActiveAudioId(null); setIsPlaying(false);
-      return;
-    }
-
-    const numbers = bracketMatch[1].match(/\d+/g);
-    if (!numbers || numbers.length < 2) {
-      setActiveAudioId(null); setIsPlaying(false);
-      return;
-    }
-    
+    const bracketMatch = reference.match(/\[(.*?)\]/); if (!bracketMatch) { setActiveAudioId(null); setIsPlaying(false); return; }
+    const numbers = bracketMatch[1].match(/\d+/g); if (!numbers || numbers.length < 2) { setActiveAudioId(null); setIsPlaying(false); return; }
     const ayahKey = `${numbers[0]}:${numbers[1]}`;
 
     try {
       const res = await fetch(`https://api.alquran.cloud/v1/ayah/${ayahKey}/ar.alafasy`);
       const json = await res.json();
-      
       if (json.data && json.data.audio) {
         audioRef.current = new Audio(json.data.audio);
         audioRef.current.onended = () => { setIsPlaying(false); setActiveAudioId(null); };
         await audioRef.current.play();
       }
-    } catch (error) {
-      console.error("Audio Error:", error);
-      setActiveAudioId(null); setIsPlaying(false);
-    }
+    } catch (error) { setActiveAudioId(null); setIsPlaying(false); }
   };
 
   return (
-    <div className="flex flex-col h-full bg-parchment text-walnut overflow-y-auto">
-      <header className="flex items-center gap-4 p-4 border-b-2 border-walnut/10 bg-white shadow-sm sticky top-0 z-10">
-        <button onClick={() => navigate('/')} className="p-1 hover:bg-parchment rounded-lg transition-colors">
-          <ArrowLeft size={22} />
+    <div className="flex flex-col h-full bg-transparent text-walnut overflow-y-auto relative">
+      <div className="absolute top-0 left-0 w-full h-80 bg-gradient-to-b from-primary/10 to-transparent -z-10 pointer-events-none" />
+
+      <header className="flex items-center gap-4 p-6 sticky top-0 z-20 bg-parchment/80 dark:bg-parchment/10 backdrop-blur-md border-b border-walnut/5 dark:border-white/5">
+        <button onClick={() => navigate('/')} className="p-2 hover:bg-white dark:hover:bg-white/10 rounded-full transition-colors bg-white/50 dark:bg-white/5 border border-walnut/10 dark:border-white/10">
+          <ArrowLeft size={20} />
         </button>
         <div>
-          <h2 className="font-bold text-lg leading-tight flex items-center gap-1.5">
-            <Bookmark size={18} className="text-primary fill-primary/20" /> My Saved Ayahs
-          </h2>
-          <p className="text-xs text-walnut/60">Verses that spoke to your heart</p>
+          <h2 className="font-serif font-bold text-xl tracking-tight text-walnut flex items-center gap-2">Library</h2>
         </div>
       </header>
 
-      <div className="p-4 space-y-5 pb-8">
+      <div className="p-6 space-y-6 pb-12">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-primary">
-            <Loader2 className="animate-spin mb-2" size={32} />
-            <p className="text-sm font-bold text-walnut/60">Opening your vault...</p>
+          <div className="flex flex-col items-center justify-center py-32 text-primary">
+            <Loader2 className="animate-spin mb-3" size={36} strokeWidth={2.5} />
+            <p className="text-xs font-bold uppercase tracking-widest text-primary/80">Opening vault...</p>
           </div>
         ) : verses.length === 0 ? (
-          <div className="text-center py-16 px-4">
-            <div className="w-20 h-20 bg-white border-2 border-walnut/20 rounded-3xl flex items-center justify-center mx-auto mb-5 shadow-sm">
-              <Bookmark size={32} className="text-walnut/30" />
+          <div className="text-center py-20 px-4">
+            <div className="w-24 h-24 bg-white/50 dark:bg-white/5 border border-walnut/10 dark:border-white/10 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-sm dark:shadow-none">
+              <Bookmark size={36} className="text-primary/40" strokeWidth={1.5} />
             </div>
-            <h3 className="font-bold text-xl mb-2 tracking-tight">Your vault is empty</h3>
-            <p className="text-sm text-walnut/60 max-w-[250px] mx-auto leading-relaxed">
-              Use the MoodChat to find comfort, then click 'Save' to bookmark verses here for later.
+            <h3 className="font-serif font-bold text-2xl mb-2 text-walnut">Your vault is empty</h3>
+            <p className="text-sm text-walnut/60 dark:text-walnut/70 max-w-[260px] mx-auto leading-relaxed">
+              When a verse brings you peace in the MoodChat, save it here to build your personal sanctuary.
             </p>
-            <button 
-              onClick={() => navigate('/mood')}
-              className="mt-6 font-bold text-sm bg-primary text-white px-6 py-3 rounded-xl border-2 border-walnut shadow-[2px_2px_0px_0px_var(--color-walnut)] active:shadow-none active:translate-y-0.5 transition-all"
-            >
+            <button onClick={() => navigate('/mood')} className="mt-8 font-bold text-sm bg-walnut dark:bg-primary text-white px-8 py-3.5 rounded-full hover:bg-walnut/90 transition-all shadow-md dark:shadow-sm hover:-translate-y-0.5 active:scale-95">
               Go to MoodChat
             </button>
           </div>
         ) : (
-          verses.map((verse) => (
-            <div key={verse.id} className="bg-white border-2 border-walnut rounded-2xl p-5 shadow-[4px_4px_0px_0px_hsl(20,10%,20%)] relative mt-4">
-              <div className="absolute -top-3 left-4 bg-primary text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border-2 border-walnut shadow-sm">
-                When you felt: "{verse.feeling}"
-              </div>
+          <div className="space-y-8 mt-2">
+            {verses.map((verse) => (
+              <div key={verse.id} className="bg-white/90 dark:bg-white/5 backdrop-blur-sm border border-walnut/10 dark:border-white/10 rounded-3xl p-6 shadow-sm dark:shadow-none hover:shadow-md transition-shadow relative group">
+                
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-primary/10 dark:bg-primary/20 text-primary text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full inline-flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/50"></span>
+                    When you felt: {verse.feeling}
+                  </div>
+                  <Quote size={20} className="text-walnut/10 dark:text-white/10" />
+                </div>
 
-              <Quote size={24} className="text-primary/10 absolute top-5 right-5 fill-primary/10" />
-
-              <div className="mt-4 space-y-3">
-                <p className="text-right text-xl font-serif tracking-wide text-walnut font-bold leading-loose">
+                <p className="text-right text-2xl font-serif tracking-wide text-walnut/90 dark:text-walnut font-bold leading-loose mt-2">
                   {verse.arabic}
                 </p>
-                <p className="text-sm italic text-walnut/80 font-medium border-l-2 border-primary/40 pl-3">
+                <p className="text-sm italic font-medium text-walnut/70 leading-relaxed mt-4 border-l-2 border-primary/30 pl-4">
                   "{verse.translation}"
                 </p>
                 
-                <div className="flex items-center justify-between pt-3 mt-2 border-t border-walnut/10">
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-primary">
+                <div className="flex items-center justify-between mt-6 pt-4 border-t border-walnut/5 dark:border-white/5 relative">
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-primary/60">
                     {verse.reference}
                   </p>
-                  <button 
-                    onClick={() => toggleAudio(verse.reference, verse.id)}
-                    className={`flex items-center gap-1.5 text-[10px] uppercase font-bold transition-colors bg-parchment px-3 py-1.5 rounded-lg border border-walnut/20
-                      ${activeAudioId === verse.id ? 'text-primary border-primary/50' : 'text-walnut/70 hover:text-primary hover:border-primary/50'}`}
-                  >
-                    {activeAudioId === verse.id && isPlaying ? (
-                      <><Pause size={14} className="fill-primary" /> Pause</>
-                    ) : activeAudioId === verse.id && !isPlaying ? (
-                      <><Play size={14} className="fill-primary" /> Resume</>
-                    ) : (
-                      <><Volume2 size={14} /> Listen</>
-                    )}
+                  <button onClick={() => toggleAudio(verse.reference, verse.id)} className={`absolute right-0 -top-12 flex items-center gap-1.5 text-[10px] uppercase font-bold transition-all duration-300 px-4 py-2 rounded-full shadow-md dark:shadow-sm border border-white dark:border-transparent ${activeAudioId === verse.id ? 'bg-primary text-white scale-105' : 'bg-parchment dark:bg-white/10 text-walnut hover:bg-primary/10 hover:text-primary opacity-80 group-hover:opacity-100'}`}>
+                    {activeAudioId === verse.id && isPlaying ? <><Pause size={12} className="fill-current" /> Pause</> : activeAudioId === verse.id && !isPlaying ? <><Play size={12} className="fill-current" /> Resume</> : <><Play size={12} className="fill-current" /> Listen</>}
                   </button>
                 </div>
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
     </div>

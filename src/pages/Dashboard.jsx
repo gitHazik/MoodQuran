@@ -1,22 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Map, Flame, Bookmark } from 'lucide-react';
+import { Heart, Map, Flame, Bookmark, ArrowRight } from 'lucide-react';
 import { getStreakData } from '../lib/streak'; 
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [streakData, setStreakData] = useState({ streak: 0, lastActive: null });
+  const userName = localStorage.getItem('userName') || 'Friend';
 
-  // Load the streak when the dashboard mounts
   useEffect(() => {
     setStreakData(getStreakData());
   }, []);
 
-  // --- DYNAMIC CALENDAR LOGIC ---
   const today = new Date();
   const todayStr = today.toLocaleDateString('en-CA');
   const isTodayActive = streakData.lastActive === todayStr;
-  const activeCount = Math.min(streakData.streak, 7); // Cap visual streak at 7
+  const activeCount = Math.min(streakData.streak, 7); 
   
   const endIndex = isTodayActive ? 6 : 5;
   const startIndex = endIndex - activeCount + 1;
@@ -32,41 +31,52 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="flex flex-col h-full p-6 overflow-y-auto bg-white">
+    <div className="flex flex-col h-full p-6 overflow-y-auto bg-transparent relative">
       
+      {/* Decorative Background Blob */}
+      <div className="absolute top-0 left-0 w-full h-64 bg-primary/5 blur-3xl -z-10 rounded-full mix-blend-multiply dark:mix-blend-lighten pointer-events-none" />
+
       {/* Header Profile Section */}
-      <header className="flex justify-between items-center mb-8 pt-4">
+      <header className="flex justify-between items-end mb-8 pt-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Salam, Hazik</h1>
-          <p className="text-walnut/70 text-sm mt-1">Welcome back to your journey.</p>
+          <p className="text-primary font-bold tracking-widest text-[10px] uppercase mb-1">Welcome back</p>
+          <h1 className="text-3xl font-serif font-bold tracking-tight text-walnut">Salam, {userName}</h1>
         </div>
-        <div className="w-12 h-12 bg-walnut text-parchment rounded-full flex items-center justify-center font-bold text-lg shadow-[2px_2px_0px_0px_hsl(20,10%,20%)]">
-          H
+        <div className="w-12 h-12 bg-white/50 dark:bg-white/5 border border-walnut/10 dark:border-white/10 text-primary rounded-full flex items-center justify-center font-bold text-lg shadow-sm dark:shadow-none">
+          {userName.charAt(0).toUpperCase()}
         </div>
       </header>
 
-      {/* Dynamic Momentum / Streak Widget */}
-      <section className="bg-white border-2 border-walnut rounded-2xl p-5 mb-8 shadow-[4px_4px_0px_0px_hsl(20,10%,20%)] transition-all">
-        <div className="flex items-center gap-2 mb-4">
-          <Flame 
-            className={streakData.streak > 0 ? "text-primary animate-pulse" : "text-walnut/30"} 
-            size={24} strokeWidth={2.5} 
-          />
-          <h2 className="font-bold text-lg tracking-tight">
-            {streakData.streak > 0 ? `${streakData.streak} Day Streak` : "Start your streak"}
-          </h2>
+      {/* Elegant Streak Widget */}
+      <section className="bg-white/80 dark:bg-white/5 backdrop-blur-md border border-walnut/10 dark:border-white/10 rounded-3xl p-6 mb-8 shadow-sm dark:shadow-none">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-primary/10 dark:bg-primary/20 rounded-xl text-primary">
+              <Flame 
+                size={20} 
+                strokeWidth={2.5} 
+                className={streakData.streak > 0 ? "animate-pulse" : ""} 
+              />
+            </div>
+            <div>
+              <h2 className="font-bold text-lg text-walnut leading-none mb-1">
+                {streakData.streak > 0 ? `${streakData.streak} Day Streak` : "Start your streak"}
+              </h2>
+              <p className="text-xs text-walnut/50 dark:text-walnut/60">Consistent reflection</p>
+            </div>
+          </div>
         </div>
         
-        <div className="flex justify-between">
+        <div className="flex justify-between gap-1">
           {last7Days.map((day, i) => (
             <div key={i} className="flex flex-col items-center gap-1">
               <div 
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-500
+                className={`w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-bold transition-all duration-500
                 ${day.isActive 
-                  ? 'bg-primary border-primary text-white shadow-sm scale-110' 
+                  ? 'bg-primary text-white shadow-md shadow-primary/20 dark:shadow-none scale-105' 
                   : day.isToday 
-                    ? 'bg-white border-primary/40 text-primary animate-pulse'
-                    : 'bg-parchment border-walnut/20 text-walnut/40'}`}
+                    ? 'bg-white dark:bg-transparent border-2 border-primary/30 dark:border-primary/50 text-primary'
+                    : 'bg-transparent border border-walnut/10 dark:border-white/10 text-walnut/40 dark:text-walnut/40'}`}
               >
                 {day.label}
               </div>
@@ -75,34 +85,55 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Core Application Hub Navigation */}
-      <section className="flex flex-col gap-5 mt-auto mb-4">
+      {/* Asymmetric Navigation Grid */}
+      <section className="grid grid-cols-2 gap-4 mt-auto mb-4">
         
-        <button onClick={() => navigate('/mood')} className="flex flex-col items-start bg-white border-2 border-walnut rounded-2xl p-5 shadow-[4px_4px_0px_0px_hsl(20,10%,20%)] active:shadow-none active:translate-y-1 active:translate-x-1 transition-all text-left">
-          <div className="flex items-center justify-between w-full mb-3">
-            <Heart className="text-primary" size={28} strokeWidth={2.5} />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-primary/80 bg-primary/10 px-2 py-1 rounded-md">AI Chat</span>
+        {/* MoodChat - Full Width Hero Card */}
+        <button 
+          onClick={() => navigate('/mood')} 
+          className="col-span-2 group bg-white dark:bg-white/5 border border-walnut/10 dark:border-white/10 rounded-3xl p-6 shadow-sm dark:shadow-none hover:shadow-md hover:border-primary/30 dark:hover:border-primary/50 transition-all text-left relative overflow-hidden active:scale-[0.98]"
+        >
+          <div className="flex justify-between items-start mb-6">
+            <div className="p-3.5 bg-primary/10 dark:bg-primary/20 text-primary rounded-2xl group-hover:scale-110 transition-transform duration-300">
+              <Heart size={24} strokeWidth={2.5} />
+            </div>
+            <span className="bg-primary text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full">
+              AI Chat
+            </span>
           </div>
-          <h3 className="font-bold text-xl mb-1 tracking-tight">MoodQuran Chat</h3>
-          <p className="text-sm text-walnut/70 leading-relaxed">How is your heart today? Let the Quran answer.</p>
+          <h3 className="font-serif font-bold text-2xl mb-1.5 text-walnut">MoodQuran</h3>
+          <p className="text-sm text-walnut/60 dark:text-walnut/70 leading-relaxed pr-8">
+            How is your heart today? Let the scripture guide you to peace.
+          </p>
+          <ArrowRight className="absolute bottom-6 right-6 text-primary opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" size={20} />
         </button>
 
-        <button onClick={() => navigate('/paths')} className="flex flex-col items-start bg-white border-2 border-walnut rounded-2xl p-5 shadow-[4px_4px_0px_0px_hsl(20,10%,20%)] active:shadow-none active:translate-y-1 active:translate-x-1 transition-all text-left">
-          <div className="flex items-center justify-between w-full mb-3">
-            <Map className="text-primary" size={28} strokeWidth={2.5} />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-primary/80 bg-primary/10 px-2 py-1 rounded-md">Journeys</span>
+        {/* PathLearner - Half Width */}
+        <button 
+          onClick={() => navigate('/paths')} 
+          className="col-span-1 group bg-white dark:bg-white/5 border border-walnut/10 dark:border-white/10 rounded-3xl p-5 shadow-sm dark:shadow-none hover:shadow-md hover:border-primary/30 dark:hover:border-primary/50 transition-all text-left active:scale-[0.98]"
+        >
+          <div className="p-3 bg-primary/10 dark:bg-primary/20 text-primary rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform duration-300">
+            <Map size={20} strokeWidth={2.5} />
           </div>
-          <h3 className="font-bold text-xl mb-1 tracking-tight">PathLearner</h3>
-          <p className="text-sm text-walnut/70 leading-relaxed">Continue your active pathways and build habits.</p>
+          <h3 className="font-bold text-lg mb-1 text-walnut">Journeys</h3>
+          <p className="text-xs text-walnut/50 dark:text-walnut/60 leading-relaxed line-clamp-2">
+            Curated spiritual pathways.
+          </p>
         </button>
 
-        <button onClick={() => navigate('/saved')} className="flex flex-col items-start bg-white border-2 border-walnut rounded-2xl p-5 shadow-[4px_4px_0px_0px_hsl(20,10%,20%)] active:shadow-none active:translate-y-1 active:translate-x-1 transition-all text-left">
-          <div className="flex items-center justify-between w-full mb-3">
-            <Bookmark className="text-primary" size={28} strokeWidth={2.5} />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-primary/80 bg-primary/10 px-2 py-1 rounded-md">Library</span>
+        {/* Library - Half Width */}
+        <button 
+          onClick={() => navigate('/saved')} 
+          className="col-span-1 group bg-white dark:bg-white/5 border border-walnut/10 dark:border-white/10 rounded-3xl p-5 shadow-sm dark:shadow-none hover:shadow-md hover:border-primary/30 dark:hover:border-primary/50 transition-all text-left active:scale-[0.98]"
+        >
+          <div className="p-3 bg-primary/10 dark:bg-primary/20 text-primary rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform duration-300">
+            <Bookmark size={20} strokeWidth={2.5} />
           </div>
-          <h3 className="font-bold text-xl mb-1 tracking-tight">Saved Ayahs</h3>
-          <p className="text-sm text-walnut/70 leading-relaxed">Revisit the verses that brought you comfort.</p>
+          <h3 className="font-bold text-lg mb-1 text-walnut">Library</h3>
+          <p className="text-xs text-walnut/50 dark:text-walnut/60 leading-relaxed line-clamp-2">
+            Verses you have saved.
+          </p>
         </button>
 
       </section>
