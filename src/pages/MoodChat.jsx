@@ -8,12 +8,10 @@ export default function MoodChat() {
   const navigate = useNavigate();
   const chatEndRef = useRef(null);
   
-
   const [messages, setMessages] = useState([]); 
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   
-
   const [activeAudioId, setActiveAudioId] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
@@ -24,7 +22,6 @@ export default function MoodChat() {
     "I need a reminder to be patient.",
     "I am feeling grateful today."
   ];
-
 
   useEffect(() => {
     return () => {
@@ -43,7 +40,6 @@ export default function MoodChat() {
       }
       return;
     }
-
 
     if (audioRef.current) audioRef.current.pause();
     setActiveAudioId(id);
@@ -83,12 +79,10 @@ export default function MoodChat() {
   const sendMessage = async (prompt) => {
     if (!prompt.trim() || isTyping) return;
 
-
     const userMessage = { id: Date.now(), sender: 'user', text: prompt };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsTyping(true);
-    
     
     recordDailyActivity();
 
@@ -126,7 +120,6 @@ export default function MoodChat() {
     }
   };
 
-  
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
@@ -134,7 +127,6 @@ export default function MoodChat() {
   return (
     <div className="flex flex-col h-full bg-transparent text-walnut relative">
       <div className="absolute top-0 left-0 w-full h-80 bg-gradient-to-b from-primary/10 to-transparent -z-10" />
-
       
       <header className="flex items-center gap-4 p-4 sticky top-0 z-20 bg-parchment/80 dark:bg-parchment/10 backdrop-blur-md border-b border-walnut/5 dark:border-white/5">
         <button 
@@ -147,9 +139,8 @@ export default function MoodChat() {
           <Sparkles size={16} className="text-primary" /> MoodQuran Chat
         </h2>
       </header>
-
       
-      <div className="flex-1 overflow-y-auto p-4 space-y-5">
+      <div className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-5">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-5 pb-10 mt-8">
             <div className="w-16 h-16 rounded-[2rem] bg-white/50 dark:bg-white/5 border border-walnut/10 dark:border-white/10 flex items-center justify-center shadow-sm">
@@ -210,7 +201,6 @@ export default function MoodChat() {
         <div ref={chatEndRef} />
       </div>
 
-      
       <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="p-4 border-t border-walnut/5 bg-parchment/80 backdrop-blur-md flex gap-2">
         <input 
           value={input} 
