@@ -1,31 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-  --color-parchment: var(--theme-parchment);
-  --color-walnut: var(--theme-walnut);
-  --color-primary: var(--theme-primary);
-}
-
-:root {
-  /* LIGHT MODE: Pastel Sage & Deep Forest */
-  --theme-parchment: hsl(142, 40%, 96%);
-  --theme-walnut: hsl(145, 30%, 18%);
-  --theme-primary: hsl(145, 45%, 45%);
-}
-
-.dark {
-  /* DARK MODE: Deep Forest & Light Sage (Colors inverted!) */
-  --theme-parchment: hsl(145, 30%, 12%); /* Very dark green background */
-  --theme-walnut: hsl(142, 40%, 92%); /* Very light sage text/borders */
-  --theme-primary: hsl(145, 55%, 55%); /* Slightly brighter matcha for contrast */
+  --color-parchment: hsl(145, 30%, 12%); 
+  --color-walnut: hsl(142, 40%, 92%);    
+  --color-primary: hsl(145, 55%, 55%);   
 }
 
 body {
-  background-color: var(--theme-parchment);
-  color: var(--theme-walnut);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  background-color: var(--color-parchment);
+  color: var(--color-walnut);
 }
 
-/* Hide scrollbars */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

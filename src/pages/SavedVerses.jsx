@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bookmark, Quote, Loader2, Play, Pause } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
+// SavedVerses page: fetches the user's saved verse records from Supabase,
+// displays them in a library-style list, and allows listening to each verse
+// via the AlQuran Cloud audio API.
 export default function SavedVerses() {
   const navigate = useNavigate();
   const [verses, setVerses] = useState([]);
@@ -27,8 +30,8 @@ export default function SavedVerses() {
     if (audioRef.current) audioRef.current.pause();
     setActiveAudioId(verseId); setIsPlaying(true);
 
-    const bracketMatch = reference.match(/\[(.*?)\]/); if (!bracketMatch) { setActiveAudioId(null); setIsPlaying(false); return; }
-    const numbers = bracketMatch[1].match(/\d+/g); if (!numbers || numbers.length < 2) { setActiveAudioId(null); setIsPlaying(false); return; }
+    const numbers = reference.match(/\d+/g);
+    if (!numbers || numbers.length < 2) { setActiveAudioId(null); setIsPlaying(false); return; }
     const ayahKey = `${numbers[0]}:${numbers[1]}`;
 
     try {
@@ -43,16 +46,14 @@ export default function SavedVerses() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-transparent text-walnut overflow-y-auto relative">
+    <div className="flex flex-col h-full bg-transparent text-walnut overflow-y-auto scrollbar-hide relative">
       <div className="absolute top-0 left-0 w-full h-80 bg-gradient-to-b from-primary/10 to-transparent -z-10 pointer-events-none" />
 
-      <header className="flex items-center gap-4 p-6 sticky top-0 z-20 bg-parchment/80 dark:bg-parchment/10 backdrop-blur-md border-b border-walnut/5 dark:border-white/5">
+      <header className="flex items-center gap-4 p-6 sticky top-0 z-20 bg-parchment/80 dark:bg-parchment/10 backdrop-blur-md border-b border-walnut/10 dark:border-white/10">
         <button onClick={() => navigate('/')} className="p-2 hover:bg-white dark:hover:bg-white/10 rounded-full transition-colors bg-white/50 dark:bg-white/5 border border-walnut/10 dark:border-white/10">
           <ArrowLeft size={20} />
         </button>
-        <div>
-          <h2 className="font-serif font-bold text-xl tracking-tight text-walnut flex items-center gap-2">Library</h2>
-        </div>
+        <h2 className="font-serif font-bold text-xl tracking-tight text-walnut">Library</h2>
       </header>
 
       <div className="p-6 space-y-6 pb-12">
@@ -63,21 +64,18 @@ export default function SavedVerses() {
           </div>
         ) : verses.length === 0 ? (
           <div className="text-center py-20 px-4">
-            <div className="w-24 h-24 bg-white/50 dark:bg-white/5 border border-walnut/10 dark:border-white/10 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-sm dark:shadow-none">
+            <div className="w-24 h-24 bg-white/50 dark:bg-white/5 border border-walnut/10 dark:border-white/10 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-sm">
               <Bookmark size={36} className="text-primary/40" strokeWidth={1.5} />
             </div>
             <h3 className="font-serif font-bold text-2xl mb-2 text-walnut">Your vault is empty</h3>
-            <p className="text-sm text-walnut/60 dark:text-walnut/70 max-w-[260px] mx-auto leading-relaxed">
-              When a verse brings you peace in the MoodChat, save it here to build your personal sanctuary.
-            </p>
-            <button onClick={() => navigate('/mood')} className="mt-8 font-bold text-sm bg-walnut dark:bg-primary text-white px-8 py-3.5 rounded-full hover:bg-walnut/90 transition-all shadow-md dark:shadow-sm hover:-translate-y-0.5 active:scale-95">
+            <button onClick={() => navigate('/mood')} className="mt-8 font-bold text-sm bg-walnut dark:bg-primary text-white px-8 py-3.5 rounded-full hover:bg-walnut/90 transition-all shadow-sm active:scale-95">
               Go to MoodChat
             </button>
           </div>
         ) : (
           <div className="space-y-8 mt-2">
             {verses.map((verse) => (
-              <div key={verse.id} className="bg-white/90 dark:bg-white/5 backdrop-blur-sm border border-walnut/10 dark:border-white/10 rounded-3xl p-6 shadow-sm dark:shadow-none hover:shadow-md transition-shadow relative group">
+              <div key={verse.id} className="bg-white/90 dark:bg-white/5 backdrop-blur-sm border border-walnut/20 dark:border-white/10 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow">
                 
                 <div className="flex items-center justify-between mb-4">
                   <div className="bg-primary/10 dark:bg-primary/20 text-primary text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full inline-flex items-center gap-1.5">
@@ -94,13 +92,18 @@ export default function SavedVerses() {
                   "{verse.translation}"
                 </p>
                 
-                <div className="flex items-center justify-between mt-6 pt-4 border-t border-walnut/5 dark:border-white/5 relative">
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-primary/60">
-                    {verse.reference}
-                  </p>
-                  <button onClick={() => toggleAudio(verse.reference, verse.id)} className={`absolute right-0 -top-12 flex items-center gap-1.5 text-[10px] uppercase font-bold transition-all duration-300 px-4 py-2 rounded-full shadow-md dark:shadow-sm border border-white dark:border-transparent ${activeAudioId === verse.id ? 'bg-primary text-white scale-105' : 'bg-parchment dark:bg-white/10 text-walnut hover:bg-primary/10 hover:text-primary opacity-80 group-hover:opacity-100'}`}>
-                    {activeAudioId === verse.id && isPlaying ? <><Pause size={12} className="fill-current" /> Pause</> : activeAudioId === verse.id && !isPlaying ? <><Play size={12} className="fill-current" /> Resume</> : <><Play size={12} className="fill-current" /> Listen</>}
-                  </button>
+                <div className="flex flex-col gap-4 mt-6 pt-4 border-t border-walnut/10 dark:border-white/10">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] uppercase tracking-widest font-bold text-primary/60">
+                      {verse.reference}
+                    </p>
+                    <button 
+                      onClick={() => toggleAudio(verse.reference, verse.id)}
+                      className={`flex items-center gap-1.5 text-[10px] uppercase font-bold transition-all duration-300 px-4 py-2 rounded-full shadow-sm border ${activeAudioId === verse.id ? 'bg-primary text-white border-primary' : 'bg-parchment dark:bg-white/10 text-walnut border-walnut/10 dark:border-white/10 hover:bg-primary/10 hover:text-primary'}`}
+                    >
+                      {activeAudioId === verse.id && isPlaying ? <><Pause size={12} className="fill-current" /> Pause</> : activeAudioId === verse.id && !isPlaying ? <><Play size={12} className="fill-current" /> Resume</> : <><Play size={12} className="fill-current" /> Listen</>}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

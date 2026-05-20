@@ -27,33 +27,41 @@ export default function MoodChat() {
     return () => { if (audioRef.current) audioRef.current.pause(); };
   }, []);
 
-  const toggleAudio = async (reference, msgId) => {
-    if (activeAudioId === msgId && audioRef.current) {
+  const toggleAudio = async (reference, id) => {
+    if (activeAudioId === id && audioRef.current) {
       if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); } 
       else { audioRef.current.play(); setIsPlaying(true); }
       return;
     }
 
     if (audioRef.current) audioRef.current.pause();
-    setActiveAudioId(msgId);
+    setActiveAudioId(id);
     setIsPlaying(true);
-
-    const bracketMatch = reference.match(/\[(.*?)\]/);
-    if (!bracketMatch) { setActiveAudioId(null); setIsPlaying(false); return; }
-    const numbers = bracketMatch[1].match(/\d+/g);
-    if (!numbers || numbers.length < 2) { setActiveAudioId(null); setIsPlaying(false); return; }
+    const numbers = reference.match(/\d+/g);
     
+    if (!numbers || numbers.length < 2) {
+      console.error("Format error: Could not extract Chapter/Verse numbers");
+      setActiveAudioId(null); setIsPlaying(false);
+      return;
+    }
+
     const ayahKey = `${numbers[0]}:${numbers[1]}`;
 
     try {
       const res = await fetch(`https://api.alquran.cloud/v1/ayah/${ayahKey}/ar.alafasy`);
       const json = await res.json();
+      
       if (json.data && json.data.audio) {
         audioRef.current = new Audio(json.data.audio);
         audioRef.current.onended = () => { setIsPlaying(false); setActiveAudioId(null); };
         await audioRef.current.play();
+      } else {
+        throw new Error("API did not return audio for this specific verse.");
       }
-    } catch (error) { setActiveAudioId(null); setIsPlaying(false); }
+    } catch (error) {
+      console.error("Audio Error:", error);
+      setActiveAudioId(null); setIsPlaying(false);
+    }
   };
 
   const sendMessage = async (textToProcess) => {
