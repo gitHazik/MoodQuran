@@ -33,10 +33,8 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col h-full p-6 overflow-y-auto bg-transparent relative">
       
-      {/* Decorative Background Blob */}
       <div className="absolute top-0 left-0 w-full h-64 bg-primary/5 blur-3xl -z-10 rounded-full mix-blend-multiply dark:mix-blend-lighten pointer-events-none" />
 
-      {/* Header Profile Section */}
       <header className="flex justify-between items-end mb-8 pt-6">
         <div>
           <p className="text-primary font-bold tracking-widest text-[10px] uppercase mb-1">Welcome back</p>
@@ -47,7 +45,6 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Elegant Streak Widget */}
       <section className="bg-white/80 dark:bg-white/5 backdrop-blur-md border border-walnut/10 dark:border-white/10 rounded-3xl p-6 mb-8 shadow-sm dark:shadow-none">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
@@ -85,10 +82,8 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Asymmetric Navigation Grid */}
       <section className="grid grid-cols-2 gap-4 mt-auto mb-4">
         
-        {/* MoodChat - Full Width Hero Card */}
         <button 
           onClick={() => navigate('/mood')} 
           className="col-span-2 group bg-white dark:bg-white/5 border border-walnut/10 dark:border-white/10 rounded-3xl p-6 shadow-sm dark:shadow-none hover:shadow-md hover:border-primary/30 dark:hover:border-primary/50 transition-all text-left relative overflow-hidden active:scale-[0.98]"
@@ -108,7 +103,6 @@ export default function Dashboard() {
           <ArrowRight className="absolute bottom-6 right-6 text-primary opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" size={20} />
         </button>
 
-        {/* PathLearner - Half Width */}
         <button 
           onClick={() => navigate('/paths')} 
           className="col-span-1 group bg-white dark:bg-white/5 border border-walnut/10 dark:border-white/10 rounded-3xl p-5 shadow-sm dark:shadow-none hover:shadow-md hover:border-primary/30 dark:hover:border-primary/50 transition-all text-left active:scale-[0.98]"
@@ -122,7 +116,6 @@ export default function Dashboard() {
           </p>
         </button>
 
-        {/* Library - Half Width */}
         <button 
           onClick={() => navigate('/saved')} 
           className="col-span-1 group bg-white dark:bg-white/5 border border-walnut/10 dark:border-white/10 rounded-3xl p-5 shadow-sm dark:shadow-none hover:shadow-md hover:border-primary/30 dark:hover:border-primary/50 transition-all text-left active:scale-[0.98]"

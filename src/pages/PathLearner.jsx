@@ -9,7 +9,7 @@ export default function PathLearner() {
   const navigate = useNavigate();
   const [activePathId, setActivePathId] = useState('anxiety');
   const [completedDays, setCompletedDays] = useState([]);
-  const [expandedDay, setExpandedDay] = useState(null); 
+  const [expandedDay, setExpandedDay] = useState(null);
   const [reflectionInput, setReflectionInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeAudioId, setActiveAudioId] = useState(null);
@@ -17,7 +17,10 @@ export default function PathLearner() {
   const audioRef = useRef(null);
   const activePath = pathways[activePathId];
 
-  useEffect(() => { fetchProgress(); return () => { if (audioRef.current) audioRef.current.pause(); }; }, [activePathId]);
+  useEffect(() => {
+    fetchProgress();
+    return () => { if (audioRef.current) audioRef.current.pause(); };
+  }, [activePathId]);
 
   const fetchProgress = async () => {
     const { data } = await supabase.from('path_reflections').select('day_number').eq('path_id', activePathId);
@@ -27,14 +30,16 @@ export default function PathLearner() {
 
   const toggleAudio = async (reference, dayNumber) => {
     if (activeAudioId === dayNumber && audioRef.current) {
-      if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); } 
-      else { audioRef.current.play(); setIsPlaying(true); } return;
+      if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); }
+      else { audioRef.current.play(); setIsPlaying(true); }
+      return;
     }
     if (audioRef.current) audioRef.current.pause();
-    setActiveAudioId(dayNumber); setIsPlaying(true);
+    setActiveAudioId(dayNumber);
+    setIsPlaying(true);
 
-    const bracketMatch = reference.match(/\[(.*?)\]/); if (!bracketMatch) return;
-    const numbers = bracketMatch[1].match(/\d+/g); if (!numbers || numbers.length < 2) return;
+    const numbers = reference.match(/\d+/g);
+    if (!numbers || numbers.length < 2) return;
     const ayahKey = `${numbers[0]}:${numbers[1]}`;
 
     try {
@@ -56,17 +61,20 @@ export default function PathLearner() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) payload.user_id = user.id;
       await supabase.from('path_reflections').insert([payload]);
-      recordDailyActivity(); setCompletedDays(prev => [...prev, dayNumber]); setReflectionInput(''); setExpandedDay(null);
+      recordDailyActivity();
+      setCompletedDays(prev => [...prev, dayNumber]);
+      setReflectionInput('');
+      setExpandedDay(null);
     } catch (error) { alert("Error saving progress."); } finally { setIsSaving(false); }
   };
 
   const firstUncompletedDay = activePath.days.find(d => !completedDays.includes(d.dayNumber))?.dayNumber || 999;
 
   return (
-    <div className="flex flex-col h-full bg-transparent text-walnut overflow-y-auto pb-10 relative">
+    <div className="flex flex-col h-full bg-transparent text-walnut overflow-y-auto scrollbar-hide pb-10 relative">
       <div className="absolute top-0 left-0 w-full h-80 bg-gradient-to-b from-primary/10 to-transparent -z-10 pointer-events-none" />
 
-      <header className="flex items-center gap-4 p-6 sticky top-0 z-20 bg-parchment/80 dark:bg-parchment/10 backdrop-blur-md border-b border-walnut/5 dark:border-white/5">
+      <header className="flex items-center gap-4 p-6 sticky top-0 z-20 bg-parchment/80 dark:bg-parchment/10 backdrop-blur-md border-b border-walnut/10 dark:border-white/10">
         <button onClick={() => navigate('/')} className="p-2 hover:bg-white dark:hover:bg-white/10 rounded-full transition-colors bg-white/50 dark:bg-white/5 border border-walnut/10 dark:border-white/10">
           <ArrowLeft size={20} />
         </button>
@@ -114,12 +122,10 @@ export default function PathLearner() {
 
                 <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100 mt-4' : 'grid-rows-[0fr] opacity-0'}`}>
                   <div className="overflow-hidden">
-                    <div className="bg-white/90 dark:bg-white/5 backdrop-blur-sm border border-walnut/10 dark:border-white/10 rounded-3xl p-6 shadow-sm dark:shadow-none relative">
-                      
-                      <button onClick={() => toggleAudio(day.reference, day.dayNumber)} className={`absolute -top-3 right-6 flex items-center gap-1.5 text-[10px] uppercase font-bold transition-all duration-300 px-4 py-1.5 rounded-full shadow-sm border border-white dark:border-transparent ${activeAudioId === day.dayNumber ? 'bg-primary text-white scale-105' : 'bg-parchment dark:bg-white/10 text-walnut hover:bg-primary/10 hover:text-primary'}`}>
+                    <div className="bg-white/90 dark:bg-white/5 backdrop-blur-sm border border-walnut/20 dark:border-white/10 rounded-3xl p-6 shadow-sm dark:shadow-none relative">
+                      <button onClick={() => toggleAudio(day.reference, day.dayNumber)} className={`absolute -top-3 right-6 flex items-center gap-1.5 text-[10px] uppercase font-bold transition-all duration-300 px-4 py-1.5 rounded-full shadow-sm border border-white dark:border-transparent ${activeAudioId === day.dayNumber ? 'bg-primary text-white scale-105' : 'bg-parchment dark:bg-white/10 text-walnut border-walnut/10 dark:border-white/10 hover:bg-primary/10 hover:text-primary'}`}>
                         {activeAudioId === day.dayNumber && isPlaying ? <><Pause size={12} className="fill-current"/> Pause</> : <><Play size={12} className="fill-current"/> Listen</>}
                       </button>
-
                       <p className="text-right text-2xl font-serif tracking-wide font-bold leading-loose mt-2 text-walnut/90 dark:text-walnut">{day.arabic}</p>
                       <p className="text-sm italic font-medium mt-4 text-walnut/70 leading-relaxed">"{day.translation}"</p>
                       <p className="text-[10px] uppercase tracking-widest font-bold text-primary/60 mt-4 pt-3 border-t border-walnut/10 dark:border-white/10">{day.reference}</p>
@@ -132,7 +138,7 @@ export default function PathLearner() {
                       </div>
                     ) : (
                       <div className="mt-4 space-y-3">
-                        <div className="bg-white/50 dark:bg-white/5 border border-walnut/5 dark:border-white/5 rounded-2xl p-4 shadow-sm dark:shadow-none">
+                        <div className="bg-white/50 dark:bg-white/5 border border-walnut/10 dark:border-white/10 rounded-2xl p-4 shadow-sm dark:shadow-none">
                           <p className="text-xs font-medium leading-relaxed text-walnut/80 dark:text-walnut/90">
                             <strong className="text-primary block mb-1">Reflect:</strong> {day.prompt}
                           </p>

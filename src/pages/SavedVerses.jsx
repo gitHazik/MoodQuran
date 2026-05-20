@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bookmark, Quote, Loader2, Play, Pause } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
-// SavedVerses page: fetches the user's saved verse records from Supabase,
-// displays them in a library-style list, and allows listening to each verse
-// via the AlQuran Cloud audio API.
+
 export default function SavedVerses() {
   const navigate = useNavigate();
   const [verses, setVerses] = useState([]);
