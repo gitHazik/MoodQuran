@@ -4,8 +4,8 @@ export const recordDailyActivity = () => {
   // Get today's date in YYYY-MM-DD format based on local time
   const today = new Date().toLocaleDateString('en-CA'); 
   
-  const lastActive = localStorage.getItem('rihla_last_active');
-  let streak = parseInt(localStorage.getItem('rihla_streak') || '0', 10);
+  const lastActive = localStorage.getItem('MoodQuran_last_active');
+  let streak = parseInt(localStorage.getItem('MoodQuran_streak') || '0', 10);
 
   // If already active today, do nothing but return current streak
   if (lastActive === today) {
@@ -24,19 +24,19 @@ export const recordDailyActivity = () => {
       streak = 1; // Streak broken, start over at 1
     }
   } else {
-    streak = 1; // Very first time using the app
+    streak = 1; 
   }
 
-  // Save to storage
-  localStorage.setItem('rihla_last_active', today);
-  localStorage.setItem('rihla_streak', streak.toString());
+  
+  localStorage.setItem('MoodQuran_last_active', today);
+  localStorage.setItem('MoodQuran_streak', streak.toString());
   
   return streak;
 };
 
 export const getStreakData = () => {
   return {
-    streak: parseInt(localStorage.getItem('rihla_streak') || '0', 10),
-    lastActive: localStorage.getItem('rihla_last_active')
+    streak: parseInt(localStorage.getItem('MoodQuran_streak') || '0', 10),
+    lastActive: localStorage.getItem('MoodQuran_last_active')
   };
 };
